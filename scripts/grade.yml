@@ -1,0 +1,34 @@
+# grade.yml — 提交信息格式自动校验（示例工作流）
+# Copyright (c) 2026 秦晓望. Released under the MIT License (see scripts/LICENSE).
+# 用途：在 GitHub Actions 中校验最近提交的 Commit Message 是否符合 Conventional Commits 格式。
+name: commit-format-check
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  check-commit-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 校验提交信息格式（Conventional Commits）
+        shell: bash
+        run: |
+          set -euo pipefail
+          pattern='^(feat|fix|docs|style|refactor|perf|test|chore)(\(.+\))?: .+'
+          count="${COMMIT_COUNT:-10}"
+          echo "检查最近 ${count} 条提交..."
+          while IFS= read -r msg; do
+            if ! [[ "$msg" =~ $pattern ]]; then
+              echo "✘ 不合规提交信息: $msg"
+              echo "  期望格式: <type>(<scope>): <subject>"
+              echo "  示例: feat(auth): add login API"
+              exit 1
+            fi
+            echo "✔ $msg"
+          done < <(git log --format=%s -n "$count" HEAD)
+          echo "✔ 提交信息格式全部合规"
